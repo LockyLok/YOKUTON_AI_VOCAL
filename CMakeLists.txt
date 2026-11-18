@@ -1,13 +1,16 @@
+
 cmake_minimum_required(VERSION 3.22)
 project(YOKUTON_AI_VOCAL VERSION 0.1.0)
 
 include(FetchContent)
+
 FetchContent_Declare(
     JUCE
     GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
     GIT_TAG 8.0.6
     GIT_SHALLOW TRUE
 )
+
 FetchContent_MakeAvailable(JUCE)
 
 juce_add_plugin(YOKUTON
@@ -34,16 +37,23 @@ target_sources(YOKUTON PRIVATE
     Source/PluginEditor.h
 )
 
+# Generate the JUCE umbrella header used by PluginProcessor and PluginEditor
+juce_generate_juce_header(YOKUTON)
+
 target_compile_features(YOKUTON PRIVATE cxx_std_17)
+
 target_compile_definitions(YOKUTON PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
 )
-target_link_libraries(YOKUTON PRIVATE
-    juce::juce_audio_utils
-    juce::juce_dsp
-    PUBLIC juce::juce_recommended_config_flags
-           juce::juce_recommended_lto_flags
-           juce::juce_recommended_warning_flags
+
+target_link_libraries(YOKUTON
+    PRIVATE
+        juce::juce_audio_utils
+        juce::juce_dsp
+    PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
+        juce::juce_recommended_warning_flags
 )
