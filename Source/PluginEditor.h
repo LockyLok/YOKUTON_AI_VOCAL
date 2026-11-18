@@ -6,7 +6,7 @@ class YokutonAudioProcessorEditor final : public juce::AudioProcessorEditor
 {
 public:
     explicit YokutonAudioProcessorEditor (YokutonAudioProcessor&);
-    ~YokutonAudioProcessorEditor() override = default;
+    ~YokutonAudioProcessorEditor(YokutonAudioProcessor&) override = default;
     void paint (juce::Graphics&) override;
     void resized() override;
 
