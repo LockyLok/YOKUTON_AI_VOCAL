@@ -12,26 +12,38 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check build environment
+        shell: pwsh
+        run: |
+          cmake --version
+          Write-Host "Checking Visual Studio..."
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (Test-Path $vswhere) {
+            & $vswhere -latest -products * -property installationPath
+          } else {
+            Write-Host "vswhere not found"
+          }
+
       - name: Configure project
-        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+        run: cmake -S . -B build
 
       - name: Build VST3
         run: cmake --build build --config Release --target YOKUTON_VST3
 
-      - name: Prepare plugin artifact
+      - name: Find VST3
         shell: pwsh
         run: |
-          $plugin = Get-ChildItem "build/YOKUTON_artefacts/Release/VST3" -Recurse -Filter "*.vst3" | Select-Object -First 1
+          $plugin = Get-ChildItem "build" -Recurse -Filter "*.vst3" | Select-Object -First 1
           if (-not $plugin) {
             throw "VST3 plugin not found after build"
           }
           New-Item -ItemType Directory -Force -Path "dist" | Out-Null
-          Copy-Item -Path $plugin.FullName -Destination "dist/YOKUTON AI VOCAL.vst3" -Recurse
+          Copy-Item -Path $plugin.FullName -Destination "dist/YOKUTON.vst3" -Recurse
 
       - name: Upload VST3
         uses: actions/upload-artifact@v4
         with:
-          name: YOKUTON-AI-VOCAL-VST3-Windows
-          path: dist/YOKUTON AI VOCAL.vst3
+          name: YOKUTON-VST3-Windows
+          path: dist/YOKUTON.vst3
           if-no-files-found: error
           retention-days: 14
