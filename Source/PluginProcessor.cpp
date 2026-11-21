@@ -111,7 +111,11 @@ float YokutonAudioProcessor::estimateMidiNote() const
     // Autocorrelation pitch estimate, suitable for a single prominent vocal note.
     const int n = (int) pitchWindow.size();
     float rms = 0.0f;
-    for (float v : pitchWindow) rms += v * v;
+    for (int i = 0; i < n; ++i)
+    {
+        const float v = pitchWindow[(size_t) ((pitchWrite + i) % n)];
+        rms += v * v;
+    }
     rms = std::sqrt (rms / (float) n);
     if (rms < 0.003f) return detectedMidi;
 
@@ -123,7 +127,11 @@ float YokutonAudioProcessor::estimateMidiNote() const
     {
         float corr = 0.0f;
         for (int i = 0; i < n - lag; i += 3)
-            corr += pitchWindow[(size_t) i] * pitchWindow[(size_t) (i + lag)];
+        {
+            const float a = pitchWindow[(size_t) ((pitchWrite + i) % n)];
+            const float b = pitchWindow[(size_t) ((pitchWrite + i + lag) % n)];
+            corr += a * b;
+        }
         if (corr > best) { best = corr; bestLag = lag; }
     }
     if (bestLag == 0) return detectedMidi;
@@ -166,17 +174,17 @@ void YokutonAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce
     const float speed = readParam (parameters, "speed") / 100.0f;
     const float amount = readParam (parameters, "amount") / 100.0f;
     const float formant = readParam (parameters, "formant");
+    const float sustain = readParam (parameters, "sustain") / 100.0f;
     const float pitch = readParam (parameters, "pitch");
     const float mix = readParam (parameters, "mix") / 100.0f;
-    const float sustain = readParam (parameters, "sustain") / 100.0f;
 
-    // Character presets set a musical starting point; all controls remain user-adjustable.
-    const float modePitch = (mode == 0 ? 3.0f : mode == 1 ? 5.0f : mode == 2 ? 2.0f : 7.0f);
-    const float formantBias = (mode == 0 ? 2.5f : mode == 1 ? 1.0f : mode == 2 ? 0.5f : -1.0f);
-    const float totalPitch = pitch + modePitch * 0.35f;
-    const float formantTone = juce::jlimit (-0.25f, 0.25f, (formant + formantBias) / 48.0f);
-    const float attack = 0.02f + (1.0f - speed) * 0.30f;
-    const float release = 0.08f + (1.0f - speed) * 0.45f;
+    // Presets colour the spectral tilt; pitch remains controlled only by the Pitch knob.
+    const float formantBias = (mode == 0 ? 3.0f : mode == 1 ? -2.0f : mode == 2 ? 1.5f : -4.0f);
+    const float formantTone = juce::jlimit (-0.35f, 0.35f, (formant + formantBias) / 34.0f);
+    // Sustain controls note-tracker stability: higher values resist rapid note changes.
+    const float stability = 1.0f + sustain * 2.5f;
+    const float attack = (0.02f + (1.0f - speed) * 0.30f) / stability;
+    const float release = (0.08f + (1.0f - speed) * 0.45f) / stability;
 
     for (int i = 0; i < samples; ++i)
     {
@@ -189,9 +197,7 @@ void YokutonAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce
         {
             detectCounter = 0;
             const float estimate = estimateMidiNote();
-            // Sustain adds note-hold behaviour: downward note transitions settle more slowly.
-            const float heldRelease = release * (1.0f - 0.65f * sustain);
-            const float smoothing = estimate > detectedMidi ? attack : heldRelease;
+            const float smoothing = estimate > detectedMidi ? attack : release;
             detectedMidi += (estimate - detectedMidi) * juce::jlimit (0.05f, 0.9f, smoothing);
         }
 

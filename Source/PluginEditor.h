@@ -19,6 +19,7 @@ private:
 
     YokutonAudioProcessor& processor;
     NeonLook look;
+    juce::Image backgroundImage;
     juce::ComboBox character, key, scale;
     juce::Slider speed, amount, formant, sustain, pitch, mix;
     juce::ToggleButton bypass { "GLOBAL BYPASS" };

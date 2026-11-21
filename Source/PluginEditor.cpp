@@ -34,6 +34,7 @@ YokutonAudioProcessorEditor::YokutonAudioProcessorEditor (YokutonAudioProcessor&
     : AudioProcessorEditor (&p), processor (p)
 {
     setLookAndFeel (&look);
+    backgroundImage = juce::ImageCache::getFromMemory (BinaryData::yokuton_anime_bg_png, BinaryData::yokuton_anime_bg_pngSize);
     setSize (900, 620);
     auto setupCombo = [this] (juce::ComboBox& c) { addAndMakeVisible (c); c.setColour (juce::ComboBox::backgroundColourId, panel); c.setColour (juce::ComboBox::textColourId, pale); c.setColour (juce::ComboBox::outlineColourId, pink); };
     setupCombo (character); character.addItem ("KAWAII", 1); character.addItem ("HYPERPOP", 2); character.addItem ("IDOL", 3); character.addItem ("CYBER ANIME", 4);
@@ -41,11 +42,8 @@ YokutonAudioProcessorEditor::YokutonAudioProcessorEditor (YokutonAudioProcessor&
     setupCombo (scale); scale.addItem ("CHROMATIC",1); scale.addItem ("MAJOR",2); scale.addItem ("MINOR",3);
 
     auto setupSlider = [this] (juce::Slider& s, juce::Label& l, const juce::String& name) {
-        addAndMakeVisible (s);
-        s.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
-        // Use one explicit 270-degree sweep so the arc, pointer and value move together.
-        s.setRotaryParameters (juce::MathConstants<float>::pi * 1.25f,
-                              juce::MathConstants<float>::pi * 2.75f, true);
+        addAndMakeVisible (s); s.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
+        s.setRotaryParameters (juce::MathConstants<float>::pi * 1.25f, juce::MathConstants<float>::pi * 2.75f, true);
         s.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 70, 20);
         s.setColour (juce::Slider::textBoxTextColourId, pale);
         s.setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
@@ -77,14 +75,22 @@ void YokutonAudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll (bg);
     auto bounds = getLocalBounds().toFloat();
-    juce::ColourGradient grad (juce::Colour (0xffa23d91), 0, 0, juce::Colour (0xff35152f), 900, 620, false);
-    g.setGradientFill (grad); g.fillRect (bounds);
+    if (backgroundImage.isValid())
+        g.drawImage (backgroundImage, bounds, juce::RectanglePlacement::stretchToFit);
+    else
+    {
+        juce::ColourGradient grad (juce::Colour (0xffa23d91), 0, 0, juce::Colour (0xff35152f), 900, 620, false);
+        g.setGradientFill (grad); g.fillRect (bounds);
+    }
+    // Darken the artwork slightly so controls remain legible.
+    g.setColour (juce::Colour (0x88301539));
+    g.fillRect (bounds);
     g.setColour (juce::Colour (0x33ffffff));
     for (int i=0;i<22;++i) {
         const float x = (float)((i*137)%900), y = (float)((i*83)%620);
         g.drawEllipse (x, y, 12 + (i%4)*4, 12 + (i%4)*4, 1.0f);
     }
-    g.setColour (panel.withAlpha (0.88f)); g.fillRoundedRectangle (18, 18, 864, 584, 22);
+    g.setColour (panel.withAlpha (0.68f)); g.fillRoundedRectangle (18, 18, 864, 584, 22);
     g.setColour (pink); g.drawRoundedRectangle (18, 18, 864, 584, 22, 2.0f);
     g.setColour (pale); g.setFont (juce::Font (juce::FontOptions (27.0f, juce::Font::bold)));
     g.drawText ("YOKUTON", 42, 28, 250, 38, juce::Justification::centredLeft);
@@ -94,7 +100,7 @@ void YokutonAudioProcessorEditor::paint (juce::Graphics& g)
     g.drawText ("♡  NEON VOCAL SYSTEM  ♡", 570, 39, 270, 24, juce::Justification::centredRight);
 
     // Central energy orb inspired by the reference, drawn as original vector artwork.
-    auto orb = juce::Rectangle<float> (300, 125, 255, 255);
+    auto orb = juce::Rectangle<float> (285, 145, 235, 235);
     g.setColour (pink.withAlpha (0.14f)); g.fillEllipse (orb.expanded (12));
     g.setColour (pink.withAlpha (0.5f)); g.drawEllipse (orb, 7.0f);
     g.setColour (hot.withAlpha (0.22f)); g.fillEllipse (orb.reduced (32));
@@ -102,7 +108,7 @@ void YokutonAudioProcessorEditor::paint (juce::Graphics& g)
     g.setColour (pink); g.setFont (juce::Font (juce::FontOptions (64.0f, juce::Font::bold)));
     g.drawText ("ϟ", orb.toNearestInt(), juce::Justification::centred);
     g.setColour (pale.withAlpha (0.8f)); g.setFont (juce::Font (juce::FontOptions (12.0f)));
-    g.drawText ("VOICE CORE // LIVE", 300, 390, 255, 22, juce::Justification::centred);
+    g.drawText ("VOICE CORE // LIVE", 285, 385, 235, 22, juce::Justification::centred);
 
     g.setColour (pink.withAlpha (0.65f)); g.fillRoundedRectangle (35, 440, 830, 1.5f, 1.0f);
     g.setColour (pale); g.setFont (juce::Font (juce::FontOptions (12.0f)));

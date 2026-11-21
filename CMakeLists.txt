@@ -40,6 +40,12 @@ target_sources(YOKUTON PRIVATE
 # Generate the JUCE umbrella header used by PluginProcessor and PluginEditor
 juce_generate_juce_header(YOKUTON)
 
+juce_add_binary_data(YOKUTON_Assets
+    SOURCES
+        Resources/yokuton_anime_bg.png
+)
+target_link_libraries(YOKUTON PRIVATE YOKUTON_Assets)
+
 target_compile_features(YOKUTON PRIVATE cxx_std_17)
 
 target_compile_definitions(YOKUTON PUBLIC
