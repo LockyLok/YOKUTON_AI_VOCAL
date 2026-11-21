@@ -110,8 +110,21 @@ float YokutonAudioProcessor::estimateMidiNote() const
 {
     // Autocorrelation pitch estimate, suitable for a single prominent vocal note.
     const int n = (int) pitchWindow.size();
+
+    // pitchWrite points to the oldest sample after the circular buffer wraps.
+    // Read samples in chronological order; correlating the raw array introduced
+    // a discontinuity at the wrap point and caused unstable note estimates.
+    auto sampleAt = [this, n] (int index) -> float
+    {
+        return pitchWindow[(size_t) ((pitchWrite + index) % n)];
+    };
+
     float rms = 0.0f;
-    for (float v : pitchWindow) rms += v * v;
+    for (int i = 0; i < n; ++i)
+    {
+        const float v = sampleAt (i);
+        rms += v * v;
+    }
     rms = std::sqrt (rms / (float) n);
     if (rms < 0.003f) return detectedMidi;
 
@@ -122,11 +135,20 @@ float YokutonAudioProcessor::estimateMidiNote() const
     for (int lag = minLag; lag <= maxLag; ++lag)
     {
         float corr = 0.0f;
-        for (int i = 0; i < n - lag; i += 3)
-            corr += pitchWindow[(size_t) i] * pitchWindow[(size_t) (i + lag)];
-        if (corr > best) { best = corr; bestLag = lag; }
+        float energyA = 0.0f, energyB = 0.0f;
+        for (int i = 0; i < n - lag; i += 2)
+        {
+            const float a = sampleAt (i);
+            const float b = sampleAt (i + lag);
+            corr += a * b;
+            energyA += a * a;
+            energyB += b * b;
+        }
+        const float normalised = corr / std::sqrt (energyA * energyB + 1.0e-12f);
+        if (normalised > best) { best = normalised; bestLag = lag; }
     }
-    if (bestLag == 0) return detectedMidi;
+    // Reject unvoiced/noisy frames instead of steering the shifter to a random note.
+    if (bestLag == 0 || best < 0.18f) return detectedMidi;
     const float hz = (float) currentSampleRate / (float) bestLag;
     return juce::jlimit (36.0f, 96.0f, 69.0f + 12.0f * std::log2 (hz / 440.0f));
 }
@@ -139,7 +161,8 @@ float YokutonAudioProcessor::quantiseNote (float midi, int key, int scale) const
     if (scale == 0) return (float) nearest;
     float bestNote = (float) nearest;
     float bestDistance = 1000.0f;
-    for (int octave = -1; octave <= 1; ++octave)
+    const int midiOctave = (int) std::floor ((midi - 60.0f) / 12.0f);
+    for (int octave = midiOctave - 1; octave <= midiOctave + 1; ++octave)
         for (int i = 0; i < 7; ++i)
         {
             const int degree = scale == 1 ? major[i] : minor[i];
@@ -175,7 +198,9 @@ void YokutonAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce
     const float totalPitch = pitch + modePitch * 0.35f;
     const float formantTone = juce::jlimit (-0.25f, 0.25f, (formant + formantBias) / 48.0f);
     const float attack = 0.02f + (1.0f - speed) * 0.30f;
-    const float release = 0.08f + (1.0f - speed) * 0.45f;
+    const float sustain = readParam (parameters, "sustain") / 100.0f;
+    // Sustain stabilises the detected note by extending the downward tracking time.
+    const float release = 0.08f + (1.0f - speed) * 0.45f + sustain * 0.25f;
 
     for (int i = 0; i < samples; ++i)
     {
