@@ -201,7 +201,7 @@ void YokutonAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce
             detectedMidi += (estimate - detectedMidi) * juce::jlimit (0.05f, 0.9f, smoothing);
         }
 
-        const float target = quantiseNote (detectedMidi, key, scale) + totalPitch;
+        const float target = quantiseNote (detectedMidi, key, scale) + pitch;
         const float correction = (target - detectedMidi) * amount;
         const float ratio = std::pow (2.0f, correction / 12.0f);
         for (int ch = 0; ch < channels; ++ch)
