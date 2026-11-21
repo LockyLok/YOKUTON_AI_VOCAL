@@ -41,7 +41,11 @@ YokutonAudioProcessorEditor::YokutonAudioProcessorEditor (YokutonAudioProcessor&
     setupCombo (scale); scale.addItem ("CHROMATIC",1); scale.addItem ("MAJOR",2); scale.addItem ("MINOR",3);
 
     auto setupSlider = [this] (juce::Slider& s, juce::Label& l, const juce::String& name) {
-        addAndMakeVisible (s); s.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
+        addAndMakeVisible (s);
+        s.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
+        // Use one explicit 270-degree sweep so the arc, pointer and value move together.
+        s.setRotaryParameters (juce::MathConstants<float>::pi * 1.25f,
+                              juce::MathConstants<float>::pi * 2.75f, true);
         s.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 70, 20);
         s.setColour (juce::Slider::textBoxTextColourId, pale);
         s.setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
